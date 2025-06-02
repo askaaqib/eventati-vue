@@ -1,20 +1,27 @@
 <script setup>
 import { ref } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import ConfirmationDialog from '@/Components/confirmationDialogue.vue';
 import DataTable from '@/Components/DataTable.vue';
 import DataTableActions from '@/Components/DataTableActions.vue';
+import ModalForm from "@/Pages/Admin/Permission/ModalForm.vue";
 
 const confirmationDialog = ref(null);
+const showModal = ref(false)
+const editingPermission = ref(null)
 const idToDelete = ref(null);
 
-const formTitle = 'View Roles';
-
 const props = defineProps({
-    roles: Object, // paginated collection expected
-    filters: Object,
+    permissions: Object, // Paginated collection
+    filters: Object
 });
+
+const formTitle = 'Permissions';
+
+const breadcrumbs = [
+    { name: 'Permissions', href: '/admin/permissions' },
+];
 
 const deleteRecord = (id) => {
     idToDelete.value = id;
@@ -25,22 +32,29 @@ const handleConfirm = async () => {
     if (!idToDelete.value) return;
 
     try {
-        await router.delete(`/admin/roles/${idToDelete.value}`);
+        await router.delete(`/admin/permissions/${idToDelete.value}`);
     } catch (error) {
-        console.error('Error deleting role:', error);
-        alert('An unexpected error occurred.');
+        console.error('Error deleting permission:', error);
+        alert('An unexpected error occurred');
     }
 };
 
-const breadcrumbs = [
-    { name: 'Roles', href: '/admin/roles' },
-];
-
 const columns = [
     { key: 'name', label: 'Name', sortable: true },
-    { key: 'permissions', label: 'Permissions', sortable: false },
-    { key: 'actions', label: 'Actions', sortable: false },
+    { key: 'created_at', label: 'Created At', sortable: true },
+    { key: 'actions', label: 'Actions', sortable: false }
 ];
+
+const openCreateModal = () => {
+    editingPermission.value = null
+    showModal.value = true
+}
+
+const editRecord = (permission) => {
+    editingPermission.value = permission
+    showModal.value = true
+}
+
 </script>
 
 <template>
@@ -52,40 +66,34 @@ const columns = [
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <div class="p-6">
                         <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-semibold text-gray-800">Role Management</h2>
+                            <h2 class="text-xl font-semibold text-gray-800">Permission Management</h2>
                             <Link
-                                href="/admin/roles/create"
+                                @click="openCreateModal"
                                 class="inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
                             >
-                                Create New Role
+                                Create New Permission
                             </Link>
                         </div>
 
                         <DataTable
                             :columns="columns"
-                            :data="roles"
+                            :data="permissions"
                             :filters="filters"
                             @delete="deleteRecord"
                             :export-options="{ pdf: true, excel: true, csv: true, print: true }"
-                            export-file-name="roles-export"
+                            export-file-name="permissions-export"
                         >
-                            <template #cell(permissions)="{ item }">
-                                <div class="flex flex-wrap">
-                                    <span
-                                        v-for="perm in item.permissions"
-                                        :key="perm.id"
-                                        class="inline-block bg-gray-100 text-xs rounded px-2 py-1 mr-1 mb-1"
-                                    >
-                                        {{ perm.name }}
-                                    </span>
-                                </div>
+                            <template #cell(created_at)="{ item }">
+                                {{ new Date(item.created_at).toLocaleDateString() }}
                             </template>
 
                             <template #cell(actions)="{ item }">
                                 <DataTableActions
                                     :model="item"
-                                    base-route="/admin/roles"
+                                    base-route="/admin/permissions"
+                                    :use-modal="true"
                                     @delete="deleteRecord"
+                                    @edit="editRecord"
                                 />
                             </template>
                         </DataTable>
@@ -96,10 +104,17 @@ const columns = [
 
         <ConfirmationDialog
             ref="confirmationDialog"
-            title="Delete Role"
-            message="Are you sure you want to delete this role? This action cannot be undone."
+            title="Delete Permission"
+            message="Are you sure you want to delete this permission? This action cannot be undone."
             @confirm="handleConfirm"
             @cancel="idToDelete.value = null"
+        />
+
+        <ModalForm
+            :show="showModal"
+            :editing-permission="editingPermission"
+            @close="showModal = false"
+            @saved="router.reload({ only: ['permissions'] })"
         />
     </AdminLayout>
 </template>

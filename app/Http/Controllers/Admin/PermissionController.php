@@ -9,10 +9,22 @@ use Illuminate\Http\Request;
 
 class PermissionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $permissions = Permission::query()
+            ->when($request->search, fn ($query, $search) =>
+            $query->where('name', 'like', "%{$search}%")
+            )
+            ->orderBy($request->sort_by ?? 'name', $request->sort_dir ?? 'asc')
+            ->paginate($request->per_page ?? 10);
+
+        if ($request->ajax) {
+            return response()->json($permissions);
+        }
+
         return Inertia::render('Admin/Permission/Index', [
-            'permissions' => Permission::all()
+            'permissions' => $permissions,
+            'filters' => $request->only(['search', 'sort_by', 'sort_dir', 'per_page']),
         ]);
     }
 

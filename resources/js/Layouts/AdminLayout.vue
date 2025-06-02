@@ -5,13 +5,21 @@
     import NavLink from '@/Components/NavLink.vue';
     import Sidebar from '@/Layouts/Admin/Sidebar.vue';
     import TopNav from '@/Layouts/Admin/TopNav.vue';
+    import Breadcrumb from '@/Components/Breadcrumb.vue';
 
     const sidebarOpen = ref(true);
     const showingUserDropdown = ref(false);
 
-
     defineProps({
         title: String,
+        breadcrumbs: {
+            type: Array,
+            default: () => []
+        },
+        flash: {
+            type: Object,
+            default: () => ({})
+        }
     });
 
 </script>
@@ -31,11 +39,25 @@
 
             <!-- Page Content -->
             <main class="p-6">
-                <!-- Page Head and Breadcrumb -->
-                <Head :title="title" />
-                <div class="mb-6">
-                    <h1 class="text-xl font-bold text-gray-800 mb-2">{{ title }}</h1>
-                    <slot name="breadcrumbs" />
+                <!-- Success Flash Message -->
+                <div
+                    v-if="flash.success"
+                    class="mb-4 px-4 py-3 rounded bg-green-100 text-green-800 border border-green-300"
+                >
+                    {{ flash.success }}
+                </div>
+
+                <!-- Page Header Card -->
+                <div class="bg-white rounded-lg shadow-sm mb-6 p-4">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <!-- Page Title -->
+                        <h1 class="text-xl font-bold text-gray-800 mb-2 md:mb-0">{{ title }}</h1>
+
+                        <!-- Breadcrumbs -->
+                        <div class="flex items-center">
+                            <Breadcrumb :items="breadcrumbs" />
+                        </div>
+                    </div>
                 </div>
 
                 <slot />

@@ -1,12 +1,44 @@
+<script setup>
+    import { computed } from 'vue'
+    import {Head, Link, router, useForm} from '@inertiajs/vue3'
+    import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+    import AdminLayout from "@/Layouts/AdminLayout.vue";
+    import Breadcrumb from "@/Components/Breadcrumb.vue";
+    import Actions from "@/Layouts/Admin/Actions/View.vue";
+
+    const props = defineProps({
+        role: Object,
+        permissions: Array,
+        type: String
+    })
+
+    const formTitle = computed(() => props.type === 'create' ? 'Create Role' : 'Edit Role')
+
+    const form = useForm({
+        name: props.role?.name || '',
+        permissions: props.role?.permissions?.map(p => p.name) || []
+    })
+
+    const submit = () => {
+        if (props.type === 'create') {
+            form.post('/admin/roles')
+        } else {
+            form.put(`/admin/roles/${props.role.id}`)
+        }
+    }
+
+    const breadcrumbs = [
+        { name: 'Roles', href: '/admin/roles' },
+        { name: formTitle, href: null },
+    ];
+
+    const deleteRecord = () => {
+        router.delete(`/admin/roles/${idToDelete.value}`);
+    };
+</script>
+
 <template>
-    <Head :title="formTitle" />
-
-    <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">{{ formTitle }}</h2>
-            <Link href="/admin/roles" class="bg-blue-500 text-white px-4 py-2 rounded float-right">Roles</Link>
-        </template>
-
+    <AdminLayout :title="formTitle" :breadcrumbs="breadcrumbs">
         <div class="py-12">
             <div class="mx-auto max-w-8xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
@@ -32,35 +64,17 @@
                             </button>
                         </form>
                     </div>
+
+                    <!-- Action Buttons -->
+                    <Actions
+                        :model-id="role?.id"
+                        :model-name="role?.name"
+                        base-route="/admin/roles"
+                        @delete="deleteRecord"
+                    />
                 </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </AdminLayout>
 </template>
 
-<script setup>
-import { computed } from 'vue'
-import { Head, Link, useForm } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-
-const props = defineProps({
-    role: Object,
-    permissions: Array,
-    type: String
-})
-
-const formTitle = computed(() => props.type === 'create' ? 'Create Role' : 'Edit Role')
-
-const form = useForm({
-    name: props.role?.name || '',
-    permissions: props.role?.permissions?.map(p => p.name) || []
-})
-
-const submit = () => {
-    if (props.type === 'create') {
-        form.post('/admin/roles')
-    } else {
-        form.put(`/admin/roles/${props.role.id}`)
-    }
-}
-</script>

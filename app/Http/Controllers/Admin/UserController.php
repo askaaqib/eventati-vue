@@ -12,11 +12,29 @@ use Spatie\Permission\Models\Permission;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles', 'permissions')->get();
+        $users = User::with('roles', 'permissions')
+            ->when($request->search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhereHas('roles', function ($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy($request->sort_by ?? 'name', $request->sort_dir ?? 'asc')
+            ->paginate($request->per_page ?? 10);
+
+        // Return JSON for AJAX requests
+        if ($request->ajax) {
+            return response()->json($users);
+        }
+
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
+            'filters' => $request->only(['search', 'sort_by', 'sort_dir', 'per_page']),
         ]);
     }
 
@@ -56,7 +74,9 @@ class UserController extends Controller
             $user->syncPermissions($validated['permissions']);
         }
 
-        return response()->json(['message' => 'User created', 'user' => $user->load('roles', 'permissions')], 201);
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', 'Record created successfully.');
     }
 
     public function edit(User $user)
@@ -99,14 +119,16 @@ class UserController extends Controller
         $user->syncPermissions($validated['permissions'] ?? []);
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'User updated successfully');
+            ->with('success', 'Record updated successfully');
     }
 
     public function destroy($id)
     {
         $user = User::findOrFail($id);
         $user->delete();
-        return response()->json(['message' => 'User deleted']);
+
+        return redirect()->route('admin.users.index')
+            ->with('success', 'Record deleted successfully');
     }
 
     public function getRolesAndPermissions()

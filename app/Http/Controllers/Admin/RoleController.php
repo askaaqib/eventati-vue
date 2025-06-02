@@ -10,10 +10,25 @@ use Illuminate\Http\Request;
 
 class RoleController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $roles = Role::with('permissions')
+            ->when($request->search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('permissions', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
+            })
+            ->orderBy($request->sort_by ?? 'name', $request->sort_dir ?? 'asc')
+            ->paginate($request->per_page ?? 10);
+
+        if ($request->ajax) {
+            return response()->json($roles);
+        }
+
         return Inertia::render('Admin/Role/Index', [
-            'roles' => Role::with('permissions')->get()
+            'roles' => $roles,
+            'filters' => $request->only(['search', 'sort_by', 'sort_dir', 'per_page']),
         ]);
     }
 
